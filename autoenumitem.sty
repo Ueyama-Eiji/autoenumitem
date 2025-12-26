@@ -488,7 +488,7 @@
       \int_set:Nn \l_tmpa_int {%
         \fp_eval:n {%
           max( floor((\linewidth - \l__AE_leftskip_dim 
-            + \l__AE_itemsep_dim) / (\l__AE_maxwidth_dim + \l__AE_itemsep_dim)), 1)
+            + \l__AE_itemsep_dim * 2 ) / (\l__AE_maxwidth_dim + \l__AE_itemsep_dim)), 1)
         }
       }
       #1
