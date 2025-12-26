@@ -392,7 +392,7 @@
     % 前項目のボックスを閉じる
     \unskip\hbox_set_end:
     \int_compare:nNnT { \value{Aenumi} - \l__AE_itemcnt_start_int } > { 0 } {
-      % \Aitem から \Aitem（もしくは \Aitem から環境終了まで）に
+      % \Aenum から \Aenum（もしくは \Aenum から環境終了まで）に
       % 書かれた内容を保存
       \hbox_set:cn { l__AE_auto_\int_use:N \l__AE_boxcnt_auto_int _box } {%
         \int_compare:nNnT { \value{Aenumi} - \l__AE_itemcnt_start_int } = { 1 }
@@ -426,7 +426,7 @@
   \box_if_exist:cF { l__AE_auto_\int_use:N \l__AE_boxcnt_auto_int _box } {
     \box_new:c { l__AE_auto_\int_use:N \l__AE_boxcnt_auto_int _box }
   }
-  % ボックスの開始（\Aitem の後に書かれた文章を保存する）
+  % ボックスの開始（\Aenum の後に書かれた文章を保存する）
   \hbox_set:cw { l__AE_auto_\int_use:N \l__AE_boxcnt_auto_int _box }
   \ignorespaces
 }
