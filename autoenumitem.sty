@@ -197,7 +197,7 @@
       \int_set_eq:NN \l_tmpa_int \l__AI_number_of_columns_int
     }{%
       % \l__AE_maxwidth_dim : 長さが最大となる項目の横幅
-      % 環境内の（noauto を指定した項目を除く）項目すべてが \l__AI_maxwidth_dim の
+      % 環境内の（noauto を指定した項目を除く）項目すべてが \l__AE_maxwidth_dim の
       % 横幅であったとしても，それらに項目間に itemsep のスペースを入れながら
       % 並べることのできる列数の最大値が \l_tmpa_int となる．
       \int_set:Nn \l_tmpa_int {%
@@ -303,6 +303,7 @@
 %% ラベルのフォーマット定義
 \def\@AE@makelabel{
   \hbox{\hss\llap{\@AE@labelformat}}
+  % これに本当に意味があるのかはわかりません．．．
   \stepcounter{Aenumi}
   \hbox_gset:Nn \l__AE_label_box { \@AE@labelformat }
   \addtocounter{Aenumi}{-1}
@@ -407,7 +408,7 @@
       {%
         \dim_set:Nn { \l__AE_maxwidth_dim } {%
           \box_wd:c { l__AE_auto_\int_use:N \l__AE_boxcnt_auto_int _box }
-            + \box_wd:N \l__AE_label_box
+          + \box_wd:N \l__AE_label_box
         }
       }%
     }
@@ -495,7 +496,7 @@
     % \l_tmpa_dim = 列幅
     \dim_set:Nn \l_tmpa_dim {
       ( \linewidth - \l__AE_leftskip_dim 
-        + \l__AE_itemsep_dim ) / \l_tmpa_int - \l__AE_itemsep_dim
+        + \l__AE_itemsep_dim * 2 ) / \l_tmpa_int - \l__AE_itemsep_dim
     }
     \int_zero:N \l__AE_boxcnt_auto_int 
     \int_zero:N \l_tmpb_int
