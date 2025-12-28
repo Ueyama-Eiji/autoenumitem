@@ -1,0 +1,619 @@
+\ProvidesExplPackage{autolist}{2025-12-28}{}{}{}
+
+%%%%%%%%%%%%%%%%%% autoitem 環境の定義 %%%%%%%%%%%%%%%%%%%%%
+
+%% 各種変数の宣言
+\bool_new:N \l__AI_noauto_bool
+\bool_set_false:N \l__Ai_noauto_bool
+\bool_new:N \l__AI_adjust_bool
+\bool_set_true:N \l__AI_adjust_bool
+
+\int_new:N \l__AI_item_count_int
+\int_new:N \l__AI_itemcnt_before_setup_int
+\int_new:N \l__AI_boxcnt_noauto_int
+\int_new:N \l__AI_boxcnt_int
+\int_new:N \l__AI_number_of_columns_int
+
+\dim_new:N \l__AI_maxwidth_dim
+\dim_new:N \l__AI_leftmargin_dim
+\dim_new:N \l__AI_labelwidth_dim
+\dim_new:N \l__AI_leftskip_dim
+\dim_new:N \l__AI_itemsep_dim
+\dim_new:N \l__AI_before_skip_dim
+\dim_new:N \l__AI_after_skip_dim
+\dim_new:N \l__AI_before_after_skip_dim
+\dim_new:N \l__AI_mathindent_dim
+\dim_new:N \l__AI_itemize_leftmargini_dim
+\dim_new:N \l__AI_labelsep_dim
+\dim_new:N \l__AI_itemindent_dim
+\dim_new:N \l__AI_before_linewidth_dim
+
+%% ラベルのフォーマット定義
+\def\@AI@labelformat{\textbullet}
+\def\@AI@makelabel{\hbox to \l__AI_labelwidth_dim{\hss\@AI@labelformat\hss}}
+
+\keys_define:nn { itemimodule } {
+  label      .code:n    = \def\@AI@labelformat{ #1 },
+  label      .initial:n = \textbullet,
+  labelwidth .code:n    = \dim_set:Nn \l__AI_labelwidth_dim { #1 },
+  labelwidth .initial:n = 1em,
+  columns    .code:n    = \int_set:Nn \l__AI_number_of_columns_int { #1 },
+  columns    .initial:n = \c_zero_int,
+  leftmargin .code:n    = \dim_set:Nn \l__AI_leftmargin_dim { #1 },
+  leftmargin .initial:n = 2em,
+  labelsep   .code:n    = \dim_set:Nn \l__AI_labelsep_dim { #1 },
+  labelsep   .initial:n = \c_zero_dim,
+  itemindent .code:n    = \dim_set:Nn \l__AI_itemindent_dim { #1 },
+  itemindent .initial:n = \c_zero_dim,
+  itemsep    .code:n    = \dim_set:Nn \l__AI_itemsep_dim { #1 },
+  itemsep    .initial:n = 1em,
+  beforeskip .code:n    = \dim_set:Nn \l__AI_before_skip_dim { #1 },
+  beforeskip .initial:n = \c_zero_dim,
+  afterskip  .code:n    = \dim_set:Nn \l__AI_after_skip_dim { #1 },
+  afterskip  .initial:n = \c_zero_dim,
+  skip       .code:n    = \dim_set:Nn \l__AI_before_after_skip_dim { #1 },
+  skip       .initial:n = \c_zero_dim,
+}
+
+\NewDocumentCommand\AIlabelitemi{ m }{\def\@AI@labelformat{#1}}
+\NewDocumentCommand\AIlabelwidth{ m }{\dim_set:Nn \l__AI_labelwidth_dim { #1 }}
+\NewDocumentCommand\AIleftmargin{ m }{\dim_set:Nn \l__AI_leftmargin_dim { #1 }}
+\NewDocumentCommand\AIlabelsep  { m }{\dim_set:Nn \l__AI_labelsep_dim { #1 }}
+\NewDocumentCommand\AIitemindent{ m }{\dim_set:Nn \l__AI_itemindent_dim { #1 }}
+\NewDocumentCommand\AIitemsep   { m }{\dim_set:Nn \l__AI_itemsep_dim { #1 }}
+\NewDocumentCommand\AIbeforeskip{ m }{\dim_set:Nn \l__AI_before_skip_dim { #1 }}
+\NewDocumentCommand\AIafterskip { m }{\dim_set:Nn \l__AI_after_skip_dim { #1 }}
+\NewDocumentCommand\AIskip      { m }{\dim_set:Nn \l__AI_before_after_skip_dim { #1 }}
+
+\def\autoitemi{\@ifnextchar[\@autoitemi{\@autoitemi[]}}
+\expandafter\def\csname autoitemi*\endcsname{
+  \bool_set_false:N \l__AI_adjust_bool
+  \@ifnextchar[{\@autoitemi}{\@autoitemi[]}%
+}
+
+\def\@autoitemi[#1]{%
+  \int_zero:N \l__AI_number_of_columns_int
+  \keys_set:nn { itemimodule } { #1 }
+  \dim_compare:nNnTF { \l__AI_before_after_skip_dim } = { \c_zero_dim }
+    { \vskip\l__AI_before_skip_dim } { \vskip\l__AI_before_after_skip_dim }
+  \if@noskipsec \leavevmode \fi
+  \if@inlabel
+    \setbox\tw@=\box\@labels
+    \if@newlist \global\@newlistfalse \fi
+    \global\@inlabelfalse\everypar{}%
+    \dim_set_eq:NN \l__AI_leftmargin_dim \@totalleftmargin
+  \else
+    \setbox\tw@=\box\voidb@x
+    \box_clear:N \l_tmpa_box
+  \fi
+  \ifhmode \par \fi
+  \int_gzero:N \l__AI_item_count_int
+  \int_gzero:N \l__AI_boxcnt_int
+  \int_gzero:N \l__AI_itemcnt_before_setup_int
+  \dim_gzero:N \l__AI_maxwidth_dim
+  \dim_set_eq:NN \l__AI_leftskip_dim \leftskip
+  \dim_set_eq:NN \l__AI_before_linewidth_dim \linewidth
+  \let\Aitem\@AI@item
+  \hbox_set:Nw \l_tmpb_box
+}
+
+\def\@AI@item{\@ifstar{\@AI@enditem\@AI@startitem@noauto}{\@AI@enditem\@AI@startitem@auto}}
+
+\def\@AI@enditem{%
+  \bool_if:NTF \l__AI_noauto_bool {%
+    \endlist\group_end:
+    % 各種変数の初期化
+    \int_zero:N \l__AI_boxcnt_int
+    \dim_set_eq:NN \leftskip \l__AI_leftskip_dim
+    \dim_zero:N \l__AI_maxwidth_dim
+    \bool_set_false:N \l__AI_noauto_bool
+  }{%
+    % 前項目のボックスを閉じる
+    \unskip\hbox_set_end:
+    \int_compare:nNnT { \l__AI_item_count_int } > {0} {%
+      % \Aitem から \Aitem（もしくは \Aitem から環境終了まで）に
+      % 書かれた内容を保存
+      \hbox_set:cn { l__AI_auto_\int_use:N \l__AI_boxcnt_int _box } {%
+        \int_compare:nNnT { \l__AI_item_count_int } = { 1 } { \box\tw@ }
+        \@ifundefined{@AI@makelabel@change}{\@AI@makelabel}{\@AI@makelabel@change}
+        \hskip\l__AI_labelsep_dim
+        \hbox_unpack_drop:c { l__AI_auto_\int_use:N \l__AI_boxcnt_int _box }
+      }%
+      % ボックス幅の最大値の更新
+      \dim_compare:nNnT { \l__AI_maxwidth_dim } < {%
+        \box_wd:c { l__AI_auto_\int_use:N \l__AI_boxcnt_int _box } 
+      }%
+      {%
+        \dim_set:Nn { \l__AI_maxwidth_dim } {%
+          \box_wd:c { l__AI_auto_\int_use:N \l__AI_boxcnt_int _box }
+        }
+      }%
+    }
+  }
+  \let\@AI@makelabel@change\@undefined
+}
+
+%% "普通の場合" の処理
+\def\@AI@startitem@auto{
+  \@ifnextchar[{\afterassignment\@AI@startitem@auto@\@AI@startitem@changelabel}
+  {\@AI@startitem@auto@}
+}
+\def\@AI@startitem@auto@{%
+  \int_incr:N \l__AI_item_count_int
+  \int_incr:N \l__AI_boxcnt_int
+  \int_incr:N \l__AI_itemcnt_before_setup_int
+  \box_if_exist:cF { l__AI_auto_\int_use:N \l__AI_boxcnt_int _box } {
+    \box_new:c { l__AI_auto_\int_use:N \l__AI_boxcnt_int _box }
+  }
+  % ボックスの開始（\Aitem の後に書かれた文章を保存する）
+  \hbox_set:cw { l__AI_auto_\int_use:N \l__AI_boxcnt_int _box } 
+  \ignorespaces
+}
+
+%% オプションに noauto が指定された場合の処理（かなり無理やり）
+\def\@AI@startitem@noauto{
+  \@ifnextchar[
+    {\afterassignment\@AI@startitem@noauto@\@AI@startitem@changelabel}
+    {\@AI@startitem@noauto@}
+}
+\def\@AI@startitem@noauto@{%
+  % 一旦以前の項目を出力する
+  \@endautoitemi@setup
+  \int_incr:N \l__AI_item_count_int
+  \bool_set_true:N \l__AI_noauto_bool
+  \group_begin:
+    \list{}{\leftmargin\l__AI_leftmargin_dim \topsep\z@}\item\relax
+    \noindent\hskip\dimexpr
+      \l__AI_itemindent_dim - \l__AI_labelwidth_dim - \l__AI_labelsep_dim
+    \relax
+    \@ifundefined{@AI@makelabel@change}{\@AI@makelabel}{\@AI@makelabel@change}
+    \hskip\l__AI_labelsep_dim
+}
+
+\def\@AI@startitem@changelabel[#1]{%
+  \def\@AI@makelabel@change{\hbox to \l__AI_labelwidth_dim {\hss #1\hss }}%
+}
+
+%% 環境の終了処理
+\def\endautoitemi{\@endautoitemi}
+\expandafter\def\csname endautoitemi*\endcsname{\@endautoitemi}
+
+\def\@endautoitemi{%
+  \@AI@enditem\@endautoitemi@setup
+  \bool_set_true:N \l__AI_adjust_bool
+  \dim_compare:nNnTF { \l__AI_before_after_skip_dim } = { \c_zero_dim }
+    { \vskip\l__AI_after_skip_dim } { \vskip\l__AI_before_after_skip_dim }
+  \@endpetrue
+}
+\def\@endautoitemi@setup{%
+  % 列数の微調整（\@autoitemi@columnadjust）を行うかどうか
+  % デフォルト（autoitemi）では有効，autoitemi* では無効
+  \bool_if:NTF \l__AI_adjust_bool 
+    { \@endautoitemi@setup@\@autoitemi@columnadjust } { \@endautoitemi@setup@\relax }
+}
+\def\@endautoitemi@setup@#1{%
+  \dim_set_eq:NN \l__AI_leftskip_dim \leftskip
+  \dim_compare:nNnT { \l__AI_maxwidth_dim } > { \c_zero_dim } {
+    % \l_tmpa_int = 列数
+    \int_compare:nTF { \l__AI_number_of_columns_int >= 1 } {
+      \int_set_eq:NN \l_tmpa_int \l__AI_number_of_columns_int
+    }{%
+      % \l__AI_maxwidth_dim : 長さが最大となる項目の横幅
+      % 環境内の（noauto を指定した項目を除く）項目すべてが \l__AI_maxwidth_dim の
+      % 横幅であったとしても，それらに項目間に itemsep のスペースを入れながら
+      % 並べることのできる列数の最大値が \l_tmpa_int となる．
+      \int_set:Nn \l_tmpa_int {%
+        \fp_eval:n {%
+          max(
+            floor(
+              (
+                \linewidth - \l__AI_leftskip_dim 
+                - \l__AI_leftmargin_dim - \l__AI_itemindent_dim + \l__AI_labelsep_dim
+                + \l__AI_labelwidth_dim + \l__AI_itemsep_dim
+              ) / ( \l__AI_maxwidth_dim + \l__AI_itemsep_dim )
+            ), 1
+          )
+        }
+      }
+      #1
+    }
+    % \l_tmpa_dim = 列幅
+    \dim_set:Nn \l_tmpa_dim {
+      (
+        \linewidth - \l__AI_leftskip_dim 
+        - \l__AI_leftmargin_dim - \l__AI_itemindent_dim 
+        + \l__AI_labelsep_dim + \l__AI_labelwidth_dim
+        + \l__AI_itemsep_dim
+      ) / \l_tmpa_int - \l__AI_itemsep_dim
+    }
+    \int_zero:N \l__AI_boxcnt_int 
+    \int_zero:N \l_tmpb_int 
+    \box_clear:N \l_tmpb_box
+    \int_do_while:nNnn {\l__AI_itemcnt_before_setup_int} > {0} {%
+      \int_incr:N \l__AI_boxcnt_int
+      \int_decr:N \l__AI_itemcnt_before_setup_int
+      \hbox_set_to_wd:Nnn \l_tmpa_box { \l_tmpa_dim } {%
+        \box_use:c { l__AI_auto_\int_use:N \l__AI_boxcnt_int _box }\hss
+      }
+      % \@AI@startitem -- \@AI@enditem で保存したボックスたちを
+      % \l_tmpb_box にまとめてぶち込む
+      \hbox_set:Nn \l_tmpb_box {
+        \hbox_unpack_drop:N \l_tmpb_box \box_use:N \l_tmpa_box \hskip\l__AI_itemsep_dim
+      }
+      \int_incr:N \l_tmpb_int
+      % ここで実際に出力する
+      \int_compare:nNnF { \l_tmpb_int } < { \l_tmpa_int } {
+        \hbox_to_wd:nn { \hsize } {
+          \hskip\dimexpr
+            \l__AI_leftskip_dim + \l__AI_leftmargin_dim - \l__AI_labelsep_dim 
+              + \l__AI_itemindent_dim + \@totalleftmargin - \l__AI_labelwidth_dim \relax
+          \hbox_unpack_drop:N \l_tmpb_box\hss
+        }
+        \int_zero:N \l_tmpb_int
+      }%
+    }%
+    % 未完成の行が残っていた場合の処理
+    \int_compare:nNnT { \l_tmpb_int } > { 0 } {%
+      \hbox_to_wd:nn { \hsize } {
+        \hskip\dimexpr
+          \l__AI_leftskip_dim + \l__AI_leftmargin_dim - \l__AI_labelsep_dim 
+            + \l__AI_itemindent_dim + \@totalleftmargin - \l__AI_labelwidth_dim \relax
+        \hbox_unpack_drop:N \l_tmpb_box\hss
+      }%
+    }%
+  }
+}
+
+%% 列数の微調整
+%  \l__tmpa_int で求めた列数で配置したときの行数と同じ行数に配置できる範疇で
+%  列数を最小化する．
+\int_new:N \l__AI_adjust_int
+\def\@autoitemi@columnadjust{
+  \int_compare:nNnT { \l__AI_itemcnt_before_setup_int } > {0} {
+    \int_set_eq:NN \l__AI_adjust_int \l_tmpa_int
+    \int_set:Nn \l_tmpa_int {
+      \fp_eval:n {%
+        ceil(\l__AI_itemcnt_before_setup_int / 
+          ceil(\l__AI_itemcnt_before_setup_int / \l__AI_adjust_int))
+      }
+    }
+  }
+}
+
+%%%%%%%%%%%%%%%%%% autoenumi 環境の定義 %%%%%%%%%%%%%%%%%%%%%
+
+%% 各種変数の宣言
+\bool_new:N \l__AE_noauto_bool
+\bool_set_false:N \l__AE_noauto_bool
+\bool_new:N \l__AE_adjust_bool
+\bool_set_true:N \l__AE_adjust_bool
+
+\int_new:N \l__AE_item_count_int
+\int_new:N \l__AE_itemcnt_before_setup_int
+\int_new:N \l__AE_boxcnt_auto_int
+\int_new:N \l__AE_adjust_int
+\int_new:N \l__AE_number_of_columns_int
+\int_new:N \l__AE_itemcnt_start_int
+
+\dim_new:N \l__AE_maxwidth_dim
+\dim_new:N \l__AE_leftmargin_dim
+\dim_new:N \l__AE_leftskip_dim
+\dim_new:N \l__AE_itemsep_dim
+\dim_new:N \l__AE_itemindent_dim
+\dim_new:N \l__AE_labelsep_dim
+\dim_new:N \l__AE_before_skip_dim
+\dim_new:N \l__AE_after_skip_dim
+\dim_new:N \l__AE_before_after_skip_dim
+\dim_new:N \l__AE_mathindent_dim
+\dim_new:N \l__AE_itemize_leftmargini_dim
+\dim_new:N \l__AE_before_linewidth_dim
+\dim_new:N \g__AE_label_maxwidth_dim
+
+\box_new:N \l__AE_label_box
+
+\newcounter{Aenumi}
+\setcounter{Aenumi}{0}
+
+%% ラベルのフォーマット定義
+\def\@AE@makelabel{
+  \hbox{\hss\llap{\@AE@labelformat}}
+  \bool_if:NF \l__AE_noauto_bool {
+    \box_if_exist:cF { l__AE_label_\int_to_arabic:n {\c@Aenumi}_box } {
+      \box_new:c { l__AE_label_\int_to_arabic:n {\c@Aenumi}_box }
+    }
+    \hbox_set:cn { l__AE_label_\int_to_arabic:n {\c@Aenumi}_box } { \@AE@labelformat }
+    \dim_compare:nNnT 
+      { \g__AE_label_maxwidth_dim } < { \box_wd:c { l__AE_label_\int_to_arabic:n {\c@Aenumi}_box } }
+      {
+        \dim_gset:Nn \g__AE_label_maxwidth_dim {
+          \box_wd:c { l__AE_label_\int_to_arabic:n {\c@Aenumi}_box } 
+        }
+      }
+  }
+}
+
+\keys_define:nn { enumimodule } {
+  label      .code:n    = \def\@AE@labelformat{ #1 },
+  label      .initial:n = (\arabic{Aenumi}),
+  columns    .code:n    = \int_set:Nn \l__AE_number_of_columns_int { #1 },
+  columns    .initial:n = \c_zero_int,
+  start      .code:n    = \int_set:Nn \l__AE_itemcnt_start_int { #1 - 1 },
+  start      .initial:n = 1,
+  leftmargin .code:n    = \dim_set:Nn \l__AE_leftmargin_dim { #1 },
+  leftmargin .initial:n = 2em,
+  labelsep   .code:n    = \dim_set:Nn \l__AE_labelsep_dim { #1 },
+  labelsep   .initial:n = 1em,
+  itemindent .code:n    = \dim_set:Nn \l__AE_itemindent_dim { #1 },
+  itemindent .initial:n = 1em,
+  itemsep    .code:n    = \dim_set:Nn \l__AE_itemsep_dim { #1 },
+  itemsep    .initial:n = 1em,
+  beforeskip .code:n    = \dim_set:Nn \l__AE_before_skip_dim { #1 },
+  beforeskip .initial:n = \c_zero_dim,
+  afterskip  .code:n    = \dim_set:Nn \l__AE_after_skip_dim { #1 },
+  afterskip  .initial:n = \c_zero_dim,
+  skip       .code:n    = \dim_set:Nn \l__AE_before_after_skip_dim { #1 },
+  skip       .initial:n = \c_zero_dim,
+}
+
+\NewDocumentCommand\AElabelenumi{ m }{\def\@AE@labelformat{#1}}
+\NewDocumentCommand\AEleftmargin{ m }{\dim_set:Nn \l__AE_leftmargin_dim { #1 }}
+\NewDocumentCommand\AElabelsep  { m }{\dim_set:Nn \l__AE_labelsep_dim { #1 }}
+\NewDocumentCommand\AEitemindent{ m }{\dim_set:Nn \l__AE_itemindent_dim { #1 }}
+\NewDocumentCommand\AEitemsep   { m }{\dim_set:Nn \l__AE_itemsep_dim { #1 }}
+\NewDocumentCommand\AEbeforeskip{ m }{\dim_set:Nn \l__AE_before_skip_dim { #1 }}
+\NewDocumentCommand\AEafterskip { m }{\dim_set:Nn \l__AE_after_skip_dim { #1 }}
+\NewDocumentCommand\AEskip      { m }{\dim_set:Nn \l__AE_before_after_skip_dim { #1 }}
+
+\def\autoenumi{\@ifnextchar[\@autoenumi{\@autoenumi[]}}
+\expandafter\def\csname autoenumi*\endcsname{
+  \bool_set_false:N \l__AE_adjust_bool
+  \@ifnextchar[\@autoenumi{\@autoenumi[]}%
+}
+
+%% 環境の開始処理
+\def\@autoenumi[#1]{%
+  \setcounter{Aenumi}{0}
+  \int_zero:N \l__AE_number_of_columns_int
+  \int_zero:N \l__AE_itemcnt_start_int
+  \keys_set:nn { enumimodule } { #1 }
+  \dim_compare:nNnTF { \l__AE_before_after_skip_dim } = { \c_zero_dim }
+    { \vskip\l__AE_before_skip_dim } { \vskip\l__AE_before_after_skip_dim }
+  \if@noskipsec \leavevmode \fi
+  \if@inlabel
+    \setbox\tw@=\box\@labels
+    \if@newlist \global\@newlistfalse \fi
+    \global\@inlabelfalse \everypar{}%
+    \dim_set_eq:NN \l__AE_leftmargin_dim \@totalleftmargin
+  \else
+    \setbox\tw@=\box\voidb@x
+    \box_clear:N \l_tmpa_box
+  \fi
+  \ifhmode \par \fi
+  \addtocounter{Aenumi}{\l__AE_itemcnt_start_int}
+  \int_gzero:N \l__AE_boxcnt_auto_int
+  \int_gzero:N \l__AE_itemcnt_before_setup_int
+  \dim_zero:N \l__AE_maxwidth_dim
+  \dim_gzero:N \g__AE_label_maxwidth_dim
+  \dim_set_eq:NN \l__AE_leftskip_dim \leftskip
+  \dim_set_eq:NN \l__AE_before_linewidth_dim \linewidth
+  \let\Aenum\@AE@item
+  \hbox_set:Nw \l_tmpb_box
+}
+
+\def\@AE@item{\@ifstar{\@AE@enditem\@AE@startitem@noauto}{\@AE@enditem\@AE@startitem@auto}}
+
+\def\@AE@enditem{%
+  \bool_if:NTF \l__AE_noauto_bool {%
+    \endlist\group_end:
+    % 各種変数の初期化
+    \int_zero:N \l__AE_boxcnt_auto_int
+    \dim_set_eq:NN \leftskip \l__AE_leftskip_dim
+    \dim_zero:N \l__AE_maxwidth_dim
+    \dim_gzero:N \g__AE_label_maxwidth_dim
+    \bool_set_false:N \l__AE_noauto_bool
+  }{%
+    % 前項目のボックスを閉じる
+    \unskip\hbox_set_end:
+    \int_compare:nNnT { \value{Aenumi} - \l__AE_itemcnt_start_int } > { 0 } {
+      % \Aenum から \Aenum（もしくは \Aenum から環境終了まで）に
+      % 書かれた内容を保存
+      \hbox_set:cn { l__AE_auto_\int_use:N \l__AE_boxcnt_auto_int _box } {%
+        \int_compare:nNnT { \value{Aenumi} - \l__AE_itemcnt_start_int } = { 1 }
+          { \ifvoid\tw@ \else \hskip-\box_wd:N \l__AE_label_box \copy\tw@\hskip\box_wd:N \l__AE_label_box \fi }
+        \@ifundefined{@AE@makelabel@change}{\@AE@makelabel}{
+          \addtocounter{Aenumi}{-1} \@AE@makelabel@change
+        }
+        \hskip\l__AE_labelsep_dim
+        \hbox_unpack_drop:c { l__AE_auto_\int_use:N \l__AE_boxcnt_auto_int _box }
+      }%
+      % ボックス幅の最大値の更新
+      \dim_compare:nNnT { \l__AE_maxwidth_dim } < {%
+        \box_wd:c { l__AE_auto_\int_use:N \l__AE_boxcnt_auto_int _box }
+          + \box_wd:N \l__AE_label_box
+      }%
+      {%
+        \dim_set:Nn { \l__AE_maxwidth_dim } {%
+          \box_wd:c { l__AE_auto_\int_use:N \l__AE_boxcnt_auto_int _box }
+          + \box_wd:N \l__AE_label_box
+        }
+      }%
+    }
+  }
+  \let\@AE@makelabel@change\@undefined
+}
+
+%% "普通の場合" の処理
+\def\@AE@startitem@auto{
+  \@ifnextchar[
+  {\afterassignment\@AE@startitem@auto@\@AE@startitem@changelabel}%
+  {\@AE@startitem@auto@}%
+}
+\def\@AE@startitem@auto@{%
+  \stepcounter{Aenumi}%
+  \int_incr:N \l__AE_boxcnt_auto_int
+  \int_incr:N \l__AE_itemcnt_before_setup_int
+  \box_if_exist:cF { l__AE_auto_\int_use:N \l__AE_boxcnt_auto_int _box } {
+    \box_new:c { l__AE_auto_\int_use:N \l__AE_boxcnt_auto_int _box }
+  }
+  % ボックスの開始（\Aenum の後に書かれた文章を保存する）
+  \hbox_set:cw { l__AE_auto_\int_use:N \l__AE_boxcnt_auto_int _box }
+  \ignorespaces
+}
+
+%% スター付き（ぶち抜き）の場合の処理（かなり無理やり）
+\def\@AE@startitem@noauto{
+  \@ifnextchar[
+  {\afterassignment\@AE@startitem@noauto@\@AE@startitem@changelabel}
+  {\@AE@startitem@noauto@}
+}
+\def\@AE@startitem@noauto@{%
+  % 一旦以前の項目を出力する
+  \@endautoenumi@setup
+  \stepcounter{Aenumi}%
+  \bool_set_true:N \l__AE_noauto_bool
+  \group_begin:
+    \list{}{\leftmargin\l__AE_leftmargin_dim \topsep\z@}\item\relax
+    \noindent\hskip\dimexpr\l__AE_itemindent_dim - \l__AE_labelsep_dim\relax
+    \@ifundefined{@AE@makelabel@change}{\@AE@makelabel}{
+      \addtocounter{Aenumi}{-1} \@AE@makelabel@change
+    }
+    \hskip\l__AE_labelsep_dim
+}
+
+\def\@AE@startitem@changelabel[#1]{%
+  \def\@AE@makelabel@change{%
+    \hbox{\hss\llap{#1}}
+    \bool_if:NF \l__AE_noauto_bool {
+      \box_if_exist:cF { l__AE_label_\int_to_arabic:n {\c@Aenumi}_box } {
+        \box_new:c { l__AE_label_\int_to_arabic:n {\c@Aenumi}_box }
+      }
+      \hbox_set:cn { l__AE_label_\int_to_arabic:n {\c@Aenumi}_box } { #1 }
+      \dim_compare:nNnT 
+        { \g__AE_label_maxwidth_dim } < { \box_wd:c { l__AE_label_\int_to_arabic:n {\c@Aenumi}_box } }
+        {
+          \dim_gset:Nn \g__AE_label_maxwidth_dim {
+            \box_wd:c { l__AE_label_\int_to_arabic:n {\c@Aenumi}_box } 
+          }
+        }
+    }
+  }%
+}
+
+%% 環境の終了処理
+\def\endautoenumi{\@endautoenumi}
+\expandafter\def\csname endautoenumi*\endcsname{\@endautoenumi}
+
+\def\@endautoenumi{
+  \@AE@enditem\@endautoenumi@setup
+  \bool_set_true:N \l__AE_adjust_bool
+  \dim_set_eq:NN \linewidth \l__AE_before_linewidth_dim
+  \dim_compare:nNnTF { \l__AE_before_after_skip_dim } = { \c_zero_dim }
+    { \vskip\l__AE_after_skip_dim } { \vskip\l__AE_before_after_skip_dim }
+  \@endpetrue
+}
+\def\@endautoenumi@setup{%
+  % 列数の微調整（\@autoenumi@columnadjust）を行うかどうか
+  % デフォルト（autoenumi）では有効，autoenumi* では無効
+  \bool_if:NTF \l__AE_adjust_bool
+    { \@endautoenumi@setup@\@autoenumi@columnadjust } { \@endautoenumi@setup@\relax }
+}
+
+\def\@endautoenumi@setup@#1{%
+  \dim_set_eq:NN \l__AE_leftskip_dim \leftskip
+  \dim_compare:nNnT { \l__AE_maxwidth_dim } > { \c_zero_dim } {
+    % \l_tmpa_int = 列数
+    \int_compare:nTF { \l__AE_number_of_columns_int >= 1 } {
+      \int_set_eq:NN \l_tmpa_int \l__AE_number_of_columns_int
+    }{%
+      % \l__AE_maxwidth_dim : 長さが最大となる項目の横幅
+      % 環境内の（noauto を指定した項目を除く）項目すべてが \l__AE_maxwidth_dim の
+      % 横幅であったとしても，それらに項目間に itemsep のスペースを入れながら
+      % 並べることのできる列数の最大値が \l_tmpa_int となる．
+      \int_set:Nn \l_tmpa_int {%
+        \fp_eval:n {%
+          max(
+            floor(
+              (
+                \linewidth - \l__AE_leftskip_dim 
+                - \l__AE_leftmargin_dim - \l__AE_itemindent_dim
+                + \l__AE_labelsep_dim + \l__AE_itemsep_dim
+                + \g__AE_label_maxwidth_dim
+              ) / ( \l__AE_maxwidth_dim + \g__AE_label_maxwidth_dim + \l__AE_itemsep_dim )
+            ), 1
+          )
+        }
+      }
+      #1
+    }
+    % \l_tmpa_dim = 列幅
+    \dim_set:Nn \l_tmpa_dim {
+      (
+        \linewidth - \l__AE_leftskip_dim 
+        - \l__AE_leftmargin_dim - \l__AE_itemindent_dim
+        + \l__AE_labelsep_dim   + \l__AE_itemsep_dim 
+        - \g__AE_label_maxwidth_dim * (\l_tmpa_int - 1) 
+      ) / \l_tmpa_int - \l__AE_itemsep_dim
+    }
+    \int_zero:N \l__AE_boxcnt_auto_int 
+    \int_zero:N \l_tmpb_int
+    \box_clear:N \l_tmpb_box
+    \int_do_while:nNnn { \l__AE_itemcnt_before_setup_int } > { 0 } {%
+      \int_incr:N \l__AE_boxcnt_auto_int
+      \int_decr:N \l__AE_itemcnt_before_setup_int
+      \hbox_set_to_wd:Nnn \l_tmpa_box { \l_tmpa_dim } {%
+        \box_use:c { l__AE_auto_\int_use:N \l__AE_boxcnt_auto_int _box }\hss
+      }
+      % \@AE@startitem -- \@AE@enditem で保存したボックスたちを
+      % \l_tmpb_box にまとめてぶち込む
+      \hbox_set:Nn \l_tmpb_box {
+        \hbox_unpack_drop:N \l_tmpb_box \box_use:N \l_tmpa_box
+        \hskip\dimexpr\l__AE_itemsep_dim + \g__AE_label_maxwidth_dim\relax
+      }
+      \int_incr:N \l_tmpb_int
+      % ここで実際に出力する
+      \int_compare:nT { \l_tmpb_int >= \l_tmpa_int } {
+        \hbox_to_wd:nn { \hsize } {
+          \noindent\hskip\dimexpr\l__AE_itemindent_dim - \l__AE_labelsep_dim\relax
+          \hskip\dimexpr
+            \ifvoid\tw@
+              \l__AE_leftmargin_dim + \@totalleftmargin + \l__AE_leftskip_dim
+            \else
+              \l__AE_leftmargin_dim + \l__AE_leftskip_dim + %\box_wd:N \l__AE_label_box
+            \fi\relax
+          \hbox_unpack_drop:N \l_tmpb_box\hss
+        }
+        \int_zero:N \l_tmpb_int
+      }%
+    }%
+    % 未完成の行が残っていた場合の処理
+    \int_compare:nNnT { \l_tmpb_int } > {0} {%
+      \hbox_to_wd:nn { \hsize } {
+        \noindent\hskip\dimexpr\l__AE_itemindent_dim - \l__AE_labelsep_dim\relax
+        \hskip\dimexpr
+          \ifvoid\tw@
+            \l__AE_leftmargin_dim + \@totalleftmargin + \l__AE_leftskip_dim
+          \else
+            \l__AE_leftmargin_dim + \l__AE_leftskip_dim + \box_wd:N \l__AE_label_box
+          \fi\relax
+        \hbox_unpack_drop:N \l_tmpb_box\hss
+      }%
+    }%
+  }
+}
+
+%% 列数の微調整
+%  \l__tmpa_int で求めた列数で配置したときの行数と同じ行数に配置できる範疇で
+%  列数を最小化する．
+\def\@autoenumi@columnadjust{
+  \int_compare:nNnT { \l__AE_itemcnt_before_setup_int } > { 0 } {
+    \int_set_eq:NN \l__AE_adjust_int \l_tmpa_int
+    \int_set:Nn \l_tmpa_int {
+      \fp_eval:n {%
+        ceil(\l__AE_itemcnt_before_setup_int / 
+          ceil(\l__AE_itemcnt_before_setup_int / \l__AE_adjust_int))
+      }
+    }
+  }
+}
+
+\endinput
