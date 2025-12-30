@@ -10,7 +10,6 @@
 
 \int_new:N \l__AI_item_count_int
 \int_new:N \l__AI_itemcnt_before_setup_int
-\int_new:N \l__AI_boxcnt_noauto_int
 \int_new:N \l__AI_boxcnt_int
 \int_new:N \l__AI_number_of_columns_int
 
@@ -22,11 +21,8 @@
 \dim_new:N \l__AI_before_skip_dim
 \dim_new:N \l__AI_after_skip_dim
 \dim_new:N \l__AI_before_after_skip_dim
-\dim_new:N \l__AI_mathindent_dim
-\dim_new:N \l__AI_itemize_leftmargini_dim
 \dim_new:N \l__AI_labelsep_dim
 \dim_new:N \l__AI_itemindent_dim
-\dim_new:N \l__AI_before_linewidth_dim
 
 %% ラベルのフォーマット定義
 \def\@AI@labelformat{\textbullet}
@@ -92,7 +88,6 @@
   \int_gzero:N \l__AI_itemcnt_before_setup_int
   \dim_gzero:N \l__AI_maxwidth_dim
   \dim_set_eq:NN \l__AI_leftskip_dim \leftskip
-  \dim_set_eq:NN \l__AI_before_linewidth_dim \linewidth
   \let\Aitem\@AI@item
   \hbox_set:Nw \l_tmpb_box
 }
@@ -110,7 +105,7 @@
   }{%
     % 前項目のボックスを閉じる
     \unskip\hbox_set_end:
-    \int_compare:nNnT { \l__AI_item_count_int } > {0} {%
+    \int_compare:nNnT { \l__AI_item_count_int } > { 0 } {%
       % \Aitem から \Aitem（もしくは \Aitem から環境終了まで）に
       % 書かれた内容を保存
       \hbox_set:cn { l__AI_auto_\int_use:N \l__AI_boxcnt_int _box } {%
@@ -304,12 +299,7 @@
 \dim_new:N \l__AE_before_skip_dim
 \dim_new:N \l__AE_after_skip_dim
 \dim_new:N \l__AE_before_after_skip_dim
-\dim_new:N \l__AE_mathindent_dim
-\dim_new:N \l__AE_itemize_leftmargini_dim
-\dim_new:N \l__AE_before_linewidth_dim
 \dim_new:N \g__AE_label_maxwidth_dim
-
-\box_new:N \l__AE_label_box
 
 \newcounter{Aenumi}
 \setcounter{Aenumi}{0}
@@ -318,15 +308,15 @@
 \def\@AE@makelabel{
   \hbox{\hss\llap{\@AE@labelformat}}
   \bool_if:NF \l__AE_noauto_bool {
-    \box_if_exist:cF { l__AE_label_\int_to_arabic:n {\c@Aenumi}_box } {
-      \box_new:c { l__AE_label_\int_to_arabic:n {\c@Aenumi}_box }
+    \box_if_exist:cF { l__AE_label_\int_to_arabic:n { \c@Aenumi }_box } {
+      \box_new:c { l__AE_label_\int_to_arabic:n { \c@Aenumi }_box }
     }
-    \hbox_set:cn { l__AE_label_\int_to_arabic:n {\c@Aenumi}_box } { \@AE@labelformat }
+    \hbox_set:cn { l__AE_label_\int_to_arabic:n { \c@Aenumi }_box } { \@AE@labelformat }
     \dim_compare:nNnT 
-      { \g__AE_label_maxwidth_dim } < { \box_wd:c { l__AE_label_\int_to_arabic:n {\c@Aenumi}_box } }
+      { \g__AE_label_maxwidth_dim } < { \box_wd:c { l__AE_label_\int_to_arabic:n { \c@Aenumi }_box } }
       {
         \dim_gset:Nn \g__AE_label_maxwidth_dim {
-          \box_wd:c { l__AE_label_\int_to_arabic:n {\c@Aenumi}_box } 
+          \box_wd:c { l__AE_label_\int_to_arabic:n { \c@Aenumi }_box } 
         }
       }
   }
@@ -395,7 +385,6 @@
   \dim_zero:N \l__AE_maxwidth_dim
   \dim_gzero:N \g__AE_label_maxwidth_dim
   \dim_set_eq:NN \l__AE_leftskip_dim \leftskip
-  \dim_set_eq:NN \l__AE_before_linewidth_dim \linewidth
   \let\Aenum\@AE@item
   \hbox_set:Nw \l_tmpb_box
 }
@@ -418,10 +407,15 @@
       % \Aenum から \Aenum（もしくは \Aenum から環境終了まで）に
       % 書かれた内容を保存
       \hbox_set:cn { l__AE_auto_\int_use:N \l__AE_boxcnt_auto_int _box } {%
-        \int_compare:nNnT { \value{Aenumi} - \l__AE_itemcnt_start_int } = { 1 }
-          { \ifvoid\tw@ \else \hskip-\box_wd:N \l__AE_label_box \copy\tw@\hskip\box_wd:N \l__AE_label_box \fi }
         \@ifundefined{@AE@makelabel@change}{\@AE@makelabel}{
           \addtocounter{Aenumi}{-1} \@AE@makelabel@change
+        }
+        \int_compare:nNnT { \value{Aenumi} - \l__AE_itemcnt_start_int } = { 1 } {
+          \ifvoid\tw@ \else
+            \hskip-\box_wd:c { l__AE_label_\int_to_arabic:n { \c@Aenumi }_box }
+            \copy\tw@
+            \hskip \box_wd:c { l__AE_label_\int_to_arabic:n { \c@Aenumi }_box }
+          \fi
         }
         \hskip\l__AE_labelsep_dim
         \hbox_unpack_drop:c { l__AE_auto_\int_use:N \l__AE_boxcnt_auto_int _box }
@@ -482,15 +476,15 @@
   \def\@AE@makelabel@change{%
     \hbox{\hss\llap{#1}}
     \bool_if:NF \l__AE_noauto_bool {
-      \box_if_exist:cF { l__AE_label_\int_to_arabic:n {\c@Aenumi}_box } {
-        \box_new:c { l__AE_label_\int_to_arabic:n {\c@Aenumi}_box }
+      \box_if_exist:cF { l__AE_label_\int_to_arabic:n { \c@Aenumi }_box } {
+        \box_new:c { l__AE_label_\int_to_arabic:n { \c@Aenumi }_box }
       }
-      \hbox_set:cn { l__AE_label_\int_to_arabic:n {\c@Aenumi}_box } { #1 }
+      \hbox_set:cn { l__AE_label_\int_to_arabic:n { \c@Aenumi }_box } { #1 }
       \dim_compare:nNnT 
-        { \g__AE_label_maxwidth_dim } < { \box_wd:c { l__AE_label_\int_to_arabic:n {\c@Aenumi}_box } }
+        { \g__AE_label_maxwidth_dim } < { \box_wd:c { l__AE_label_\int_to_arabic:n { \c@Aenumi }_box } }
         {
           \dim_gset:Nn \g__AE_label_maxwidth_dim {
-            \box_wd:c { l__AE_label_\int_to_arabic:n {\c@Aenumi}_box } 
+            \box_wd:c { l__AE_label_\int_to_arabic:n { \c@Aenumi }_box } 
           }
         }
     }
@@ -504,7 +498,6 @@
 \def\@endautoenumi{
   \@AE@enditem\@endautoenumi@setup
   \bool_set_true:N \l__AE_adjust_bool
-  \dim_set_eq:NN \linewidth \l__AE_before_linewidth_dim
   \dim_compare:nNnTF { \l__AE_before_after_skip_dim } = { \c_zero_dim }
     { \vskip\l__AE_after_skip_dim } { \vskip\l__AE_before_after_skip_dim }
   \@endpetrue
@@ -576,7 +569,7 @@
             \ifvoid\tw@
               \l__AE_leftmargin_dim + \@totalleftmargin + \l__AE_leftskip_dim
             \else
-              \l__AE_leftmargin_dim + \l__AE_leftskip_dim + %\box_wd:N \l__AE_label_box
+              \l__AE_leftmargin_dim + \l__AE_leftskip_dim + \box_wd:N \g__AE_label_maxwidth_dim
             \fi\relax
           \hbox_unpack_drop:N \l_tmpb_box\hss
         }
@@ -591,7 +584,7 @@
           \ifvoid\tw@
             \l__AE_leftmargin_dim + \@totalleftmargin + \l__AE_leftskip_dim
           \else
-            \l__AE_leftmargin_dim + \l__AE_leftskip_dim + \box_wd:N \l__AE_label_box
+            \l__AE_leftmargin_dim + \l__AE_leftskip_dim + \box_wd:N \g__AE_label_maxwidth_dim
           \fi\relax
         \hbox_unpack_drop:N \l_tmpb_box\hss
       }%
