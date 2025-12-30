@@ -150,7 +150,7 @@
   \ignorespaces
 }
 
-%% オプションに noauto が指定された場合の処理（かなり無理やり）
+%% スター付き（ぶち抜き）の場合の処理（かなり無理やり）
 \def\@AI@startitem@noauto{
   \@ifnextchar[
     {\afterassignment\@AI@startitem@noauto@\@AI@startitem@changelabel}
@@ -229,7 +229,7 @@
     \int_zero:N \l__AI_boxcnt_int 
     \int_zero:N \l_tmpb_int 
     \box_clear:N \l_tmpb_box
-    \int_do_while:nNnn {\l__AI_itemcnt_before_setup_int} > {0} {%
+    \int_do_while:nNnn { \l__AI_itemcnt_before_setup_int } > { 0 } {%
       \int_incr:N \l__AI_boxcnt_int
       \int_decr:N \l__AI_itemcnt_before_setup_int
       \hbox_set_to_wd:Nnn \l_tmpa_box { \l_tmpa_dim } {%
@@ -429,12 +429,10 @@
       % ボックス幅の最大値の更新
       \dim_compare:nNnT { \l__AE_maxwidth_dim } < {%
         \box_wd:c { l__AE_auto_\int_use:N \l__AE_boxcnt_auto_int _box }
-          + \box_wd:N \l__AE_label_box
       }%
       {%
         \dim_set:Nn { \l__AE_maxwidth_dim } {%
           \box_wd:c { l__AE_auto_\int_use:N \l__AE_boxcnt_auto_int _box }
-          + \box_wd:N \l__AE_label_box
         }
       }%
     }
