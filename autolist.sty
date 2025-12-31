@@ -92,7 +92,9 @@
   \hbox_set:Nw \l_tmpb_box
 }
 
-\def\@AI@item{\@ifstar{\@AI@enditem\@AI@startitem@noauto}{\@AI@enditem\@AI@startitem@auto}}
+\def\@AI@item{%
+  \@ifnextchar!{\@firstoftwo{\@AI@enditem\@AI@startitem@noauto}}{\@AI@enditem\@AI@startitem@auto}%
+}
 
 \def\@AI@enditem{%
   \bool_if:NTF \l__AI_noauto_bool {%
@@ -389,7 +391,9 @@
   \hbox_set:Nw \l_tmpb_box
 }
 
-\def\@AE@item{\@ifstar{\@AE@enditem\@AE@startitem@noauto}{\@AE@enditem\@AE@startitem@auto}}
+\def\@AE@item{%
+  \@ifnextchar!{\@firstoftwo{\@AE@enditem\@AE@startitem@noauto}}{\@AE@enditem\@AE@startitem@auto}
+}
 
 \def\@AE@enditem{%
   \bool_if:NTF \l__AE_noauto_bool {%
