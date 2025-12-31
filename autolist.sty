@@ -131,9 +131,10 @@
 }
 
 %% "普通の場合" の処理
-\def\@AI@startitem@auto{
-  \@ifnextchar[{\afterassignment\@AI@startitem@auto@\@AI@startitem@changelabel}
-  {\@AI@startitem@auto@}
+\def\@AI@startitem@auto{%
+  \@ifnextchar[%
+    {\afterassignment\@AI@startitem@auto@\@AI@startitem@changelabel}%
+    {\@AI@startitem@auto@}%
 }
 \def\@AI@startitem@auto@{%
   \int_incr:N \l__AI_item_count_int
